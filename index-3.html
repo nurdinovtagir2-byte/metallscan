@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>МеталлСкан</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+
+  :root {
+    --bg: #0c0c0c;
+    --surface: #161616;
+    --surface2: #1e1e1e;
+    --border: #2c2c2c;
+    --accent: #F0A500;
+    --accent-dim: rgba(240,165,0,0.12);
+    --red: #e05252;
+    --green: #3dba72;
+    --text: #f2f2f2;
+    --muted: #666;
+    --muted2: #999;
+    --r: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    overscroll-behavior: none;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; flex-direction: column; flex: 1; }
+  .screen.active { display: flex; }
+
+  /* ══ SCREEN: HOME ══ */
+  #homeScreen {
+    padding: 0 0 24px;
+  }
+
+  .home-hero {
+    padding: 20px 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .app-logo {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 38px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .app-tagline {
+    font-size: 12px;
+    color: var(--muted2);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+
+  /* Big scan button */
+  .scan-btn {
+    margin: 20px 20px 0;
+    background: var(--accent);
+    border: none;
+    border-radius: var(--r);
+    padding: 0;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 16/9;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: transform 0.12s, filter 0.12s;
+  }
+
+  .scan-btn:active { transform: scale(0.97); filter: brightness(0.92); }
+
+  .scan-btn-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 18px,
+        rgba(0,0,0,0.06) 18px,
+        rgba(0,0,0,0.06) 20px
+      );
+  }
+
+  .scan-btn-icon {
+    font-size: 44px;
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.25));
+  }
+
+  .scan-btn-label {
+    position: relative;
+    z-index: 1;
+    font-family: 'Bebas Neue', cursive;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: #000;
+  }
+
+  /* brackets on scan button */
+  .sbracket {
+    position: absolute;
+    width: 24px; height: 24px;
+    border-color: rgba(0,0,0,0.25);
+    border-style: solid;
+    z-index: 1;
+  }
+  .sbracket.tl { top: 12px; left: 12px; border-width: 2px 0 0 2px; }
+  .sbracket.tr { top: 12px; right: 12px; border-width: 2px 2px 0 0; }
+  .sbracket.bl { bottom: 12px; left: 12px; border-width: 0 0 2px 2px; }
+  .sbracket.br { bottom: 12px; right: 12px; border-width: 0 2px 2px 0; }
+
+  /* or upload */
+  .upload-row {
+    margin: 12px 20px 0;
+    display: flex;
+    gap: 10px;
+  }
+
+  .upload-btn {
+    flex: 1;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r);
+    padding: 14px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .upload-btn:active { background: var(--surface2); }
+
+  /* History section */
+  .section-label {
+    margin: 24px 20px 10px;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+  }
+
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 20px;
+  }
+
+  .history-item {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--r);
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .history-item:active { background: var(--surface2); }
+
+  .history-thumb {
+    width: 48px; height: 48px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+
+  .history-info { flex: 1; min-width: 0; }
+
+  .history-name {
+    font-weight: 600;
+    font-size: 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .history-meta {
+    font-size: 12px;
+    color: var(--muted2);
+    margin-top: 2px;
+  }
+
+  .history-price {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--green);
+    flex-shrink: 0;
+  }
+
+  .empty-history {
+    padding: 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+    background: var(--surface);
+    border: 1.5px dashed var(--border);
+    border-radius: var(--r);
+    line-height: 1.7;
+  }
+
+  /* ══ SCREEN: CAMERA ══ */
+  #cameraScreen {
+    background: #000;
+    position: relative;
+  }
+
+  #videoEl {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .cam-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 20px;
+    pointer-events: none;
+  }
+
+  .cam-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: all;
+  }
+
+  .cam-back {
+    background: rgba(0,0,0,0.5);
+    border: none;
+    color: #fff;
+    font-size: 15px;
+    padding: 10px 16px;
+    border-radius: 30px;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+  }
+
+  .cam-title {
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+
+  /* scan frame */
+  .cam-frame {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 72%;
+    aspect-ratio: 1;
+    pointer-events: none;
+  }
+
+  .cam-frame-corner {
+    position: absolute;
+    width: 32px; height: 32px;
+    border-color: var(--accent);
+    border-style: solid;
+  }
+  .cam-frame-corner.tl { top: 0; left: 0; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+  .cam-frame-corner.tr { top: 0; right: 0; border-width: 3px 3px 0 0; border-radius: 0 4px 0 0; }
+  .cam-frame-corner.bl { bottom: 0; left: 0; border-width: 0 0 3px 3px; border-radius: 0 0 0 4px; }
+  .cam-frame-corner.br { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+
+  .cam-scan-line {
+    position: absolute;
+    left: 4%; right: 4%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: scanY 2s ease-in-out infinite;
+    display: none;
+  }
+  @keyframes scanY {
+    0%, 100% { top: 8%; }
+    50% { top: 88%; }
+  }
+
+  .cam-bottom {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 32px;
+    padding-bottom: 12px;
+    pointer-events: all;
+  }
+
+  .shutter-btn {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: #fff;
+    border: 4px solid rgba(255,255,255,0.3);
+    cursor: pointer;
+    transition: transform 0.1s;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .shutter-btn:active { transform: scale(0.92); }
+
+  .cam-hint {
+    position: absolute;
+    bottom: 110px;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 12px;
+    color: rgba(255,255,255,0.6);
+    pointer-events: none;
+  }
+
+  /* ══ SCREEN: ANALYZING ══ */
+  #analyzingScreen {
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 40px 24px;
+  }
+
+  .analyze-preview {
+    width: 160px; height: 160px;
+    border-radius: 16px;
+    object-fit: cover;
+    border: 2px solid var(--border);
+  }
+
+  .analyze-label {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 24px;
+    letter-spacing: 2px;
+    color: var(--accent);
+  }
+
+  .analyze-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 280px;
+  }
+
+  .analyze-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--muted2);
+    transition: color 0.3s;
+  }
+
+  .analyze-step.done { color: var(--green); }
+  .analyze-step.active { color: var(--text); }
+
+  .step-icon {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    flex-shrink: 0;
+    transition: all 0.3s;
+  }
+
+  .analyze-step.done .step-icon {
+    background: var(--green);
+    border-color: var(--green);
+    color: #fff;
+  }
+
+  .analyze-step.active .step-icon {
+    border-color: var(--accent);
+    animation: pulse 1s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(240,165,0,0.4); }
+    50% { box-shadow: 0 0 0 5px rgba(240,165,0,0); }
+  }
+
+  /* ══ SCREEN: RESULT ══ */
+  #resultScreen {
+    padding: 0 0 32px;
+    overflow-y: auto;
+  }
+
+  .result-image-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/3;
+    overflow: hidden;
+    background: #111;
+  }
+
+  #resultImg {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    filter: brightness(0.8);
+  }
+
+  .result-image-badge {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    right: 16px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .result-metal-name {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 42px;
+    line-height: 1;
+    color: #fff;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.6);
+    letter-spacing: 2px;
+  }
+
+  .result-conf-badge {
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(8px);
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .result-body {
+    padding: 16px 16px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .info-cell {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+  }
+
+  .info-cell-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .info-cell-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .info-cell-value.green { color: var(--green); }
+  .info-cell-value.accent { color: var(--accent); }
+
+  .result-desc {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 14px;
+    color: var(--muted2);
+    line-height: 1.65;
+  }
+
+  .result-warning {
+    background: rgba(224,82,82,0.08);
+    border: 1.5px solid rgba(224,82,82,0.25);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--red);
+    display: none;
+    line-height: 1.5;
+  }
+  .result-warning.show { display: block; }
+
+  .result-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 16px;
+    margin-top: 4px;
+  }
+
+  .action-btn {
+    width: 100%;
+    padding: 15px;
+    border-radius: var(--r);
+    border: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s, filter 0.1s;
+  }
+  .action-btn:active { transform: scale(0.98); filter: brightness(0.9); }
+
+  .action-btn.primary { background: var(--accent); color: #000; }
+  .action-btn.secondary {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    color: var(--text);
+  }
+
+  /* hidden */
+  #fileInput { display: none; }
+
+  /* Error toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--red);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: transform 0.3s ease;
+    z-index: 999;
+    white-space: nowrap;
+    max-width: 90vw;
+    text-align: center;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ══ HOME ══ -->
+<div class="screen active" id="homeScreen">
+  <div class="home-hero">
+    <div class="app-logo">МеталлСкан</div>
+    <div class="app-tagline">AI-определение металла за 5 секунд</div>
+  </div>
+
+  <button class="scan-btn" id="openCameraBtn">
+    <div class="scan-btn-bg"></div>
+    <div class="sbracket tl"></div>
+    <div class="sbracket tr"></div>
+    <div class="sbracket bl"></div>
+    <div class="sbracket br"></div>
+    <div class="scan-btn-icon">🔍</div>
+    <div class="scan-btn-label">Навести камеру</div>
+  </button>
+
+  <div class="upload-row">
+    <button class="upload-btn" id="uploadBtn">📁 Загрузить фото</button>
+  </div>
+
+  <div class="section-label">Последние определения</div>
+  <div class="history-list" id="historyList">
+    <div class="empty-history">Здесь появятся определения.<br>Наведи камеру на металл →</div>
+  </div>
+</div>
+
+<!-- ══ CAMERA ══ -->
+<div class="screen" id="cameraScreen">
+  <video id="videoEl" autoplay playsinline muted></video>
+  <div class="cam-overlay">
+    <div class="cam-top">
+      <button class="cam-back" id="camBackBtn">← Назад</button>
+      <div class="cam-title">Наведи на металл</div>
+    </div>
+    <div class="cam-frame">
+      <div class="cam-frame-corner tl"></div>
+      <div class="cam-frame-corner tr"></div>
+      <div class="cam-frame-corner bl"></div>
+      <div class="cam-frame-corner br"></div>
+      <div class="cam-scan-line" id="camScanLine"></div>
+    </div>
+    <div class="cam-hint">Держи телефон прямо, хорошее освещение</div>
+    <div class="cam-bottom">
+      <button class="shutter-btn" id="shutterBtn"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ANALYZING ══ -->
+<div class="screen" id="analyzingScreen">
+  <img id="analyzePreview" class="analyze-preview" src="" alt="">
+  <div class="analyze-label">Анализирую металл...</div>
+  <div class="analyze-steps">
+    <div class="analyze-step" id="step1">
+      <div class="step-icon">1</div>
+      <span>Передаю изображение ИИ</span>
+    </div>
+    <div class="analyze-step" id="step2">
+      <div class="step-icon">2</div>
+      <span>Определяю тип и марку</span>
+    </div>
+    <div class="analyze-step" id="step3">
+      <div class="step-icon">3</div>
+      <span>Рассчитываю цену приёмки</span>
+    </div>
+    <div class="analyze-step" id="step4">
+      <div class="step-icon">4</div>
+      <span>Готовлю рекомендации</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ RESULT ══ -->
+<div class="screen" id="resultScreen">
+  <div class="result-image-wrap">
+    <img id="resultImg" src="" alt="">
+    <div class="result-image-badge">
+      <div class="result-metal-name" id="resMetalName">—</div>
+      <div class="result-conf-badge" id="resConf">—%</div>
+    </div>
+  </div>
+  <div class="result-body">
+    <div class="result-grid">
+      <div class="info-cell">
+        <div class="info-cell-label">Марка / Тип</div>
+        <div class="info-cell-value accent" id="resGrade">—</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-cell-label">Цена приёмки</div>
+        <div class="info-cell-value green" id="resPrice">—</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-cell-label">Группа</div>
+        <div class="info-cell-value" id="resGroup">—</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-cell-label">Магнит</div>
+        <div class="info-cell-value" id="resMagnet">—</div>
+      </div>
+    </div>
+    <div class="result-desc" id="resDesc">—</div>
+    <div class="result-warning" id="resWarning"></div>
+  </div>
+  <div class="result-actions">
+    <button class="action-btn primary" id="scanAgainBtn">🔍 Определить другой металл</button>
+    <button class="action-btn secondary" id="shareBtn">📤 Поделиться результатом</button>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="image/*">
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Init Telegram ──
+const tg = window.Telegram?.WebApp;
+if (tg) {
+  tg.ready();
+  tg.expand();
+  tg.setHeaderColor('#0c0c0c');
+  tg.setBackgroundColor('#0c0c0c');
+}
+
+// ── State ──
+let cameraStream = null;
+let currentBase64 = null;
+let currentDataUrl = null;
+let history = JSON.parse(localStorage.getItem('ms_history') || '[]');
+
+// ── Screens ──
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── History ──
+function saveHistory(item) {
+  history.unshift(item);
+  if (history.length > 10) history = history.slice(0, 10);
+  try { localStorage.setItem('ms_history', JSON.stringify(history)); } catch(e) {}
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (!history.length) {
+    list.innerHTML = '<div class="empty-history">Здесь появятся определения.<br>Наведи камеру на металл →</div>';
+    return;
+  }
+  list.innerHTML = history.map((h, i) => `
+    <div class="history-item" onclick="showHistoryResult(${i})">
+      <img class="history-thumb" src="${h.imageUrl}" alt="">
+      <div class="history-info">
+        <div class="history-name">${h.metal}</div>
+        <div class="history-meta">${h.grade} · ${h.date}</div>
+      </div>
+      <div class="history-price">${h.price.split(' ')[0]}</div>
+    </div>
+  `).join('');
+}
+
+function showHistoryResult(i) {
+  const h = history[i];
+  renderResult(h, h.imageUrl);
+  showScreen('resultScreen');
+}
+
+renderHistory();
+
+// ── Camera ──
+document.getElementById('openCameraBtn').addEventListener('click', openCamera);
+
+async function openCamera() {
+  showScreen('cameraScreen');
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 960 } }
+    });
+    document.getElementById('videoEl').srcObject = cameraStream;
+  } catch(e) {
+    showToast('Нет доступа к камере — загрузи фото');
+    showScreen('homeScreen');
+  }
+}
+
+function stopCamera() {
+  if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+}
+
+document.getElementById('camBackBtn').addEventListener('click', () => {
+  stopCamera();
+  showScreen('homeScreen');
+});
+
+document.getElementById('shutterBtn').addEventListener('click', () => {
+  const video = document.getElementById('videoEl');
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+  stopCamera();
+  processImage(dataUrl);
+});
+
+// ── Upload ──
+document.getElementById('uploadBtn').addEventListener('click', () => {
+  document.getElementById('fileInput').click();
+});
+
+document.getElementById('fileInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => processImage(ev.target.result);
+  reader.readAsDataURL(file);
+  e.target.value = '';
+});
+
+// ── Process image ──
+function processImage(dataUrl) {
+  currentDataUrl = dataUrl;
+  currentBase64 = dataUrl.split(',')[1];
+  document.getElementById('analyzePreview').src = dataUrl;
+  showScreen('analyzingScreen');
+  animateSteps();
+  analyzeWithAI(currentBase64);
+}
+
+function animateSteps() {
+  const steps = ['step1','step2','step3','step4'];
+  steps.forEach(s => {
+    const el = document.getElementById(s);
+    el.classList.remove('done','active');
+  });
+  let i = 0;
+  const tick = setInterval(() => {
+    if (i > 0) document.getElementById(steps[i-1])?.classList.replace('active','done');
+    if (i < steps.length) document.getElementById(steps[i])?.classList.add('active');
+    i++;
+    if (i > steps.length) clearInterval(tick);
+  }, 700);
+}
+
+// ── AI Analysis ──
+async function analyzeWithAI(base64) {
+  const system = `Ты — эксперт-оценщик металлолома с 20 годами опыта. Тебе присылают фото металла.
+Определи: тип металла, марку, группу, реакцию на магнит, цену приёмки в России (руб/кг, 2025 год), описание признаков, предупреждение о возможных ошибках.
+Отвечай ТОЛЬКО JSON, никакого markdown, никаких пояснений вне JSON:
+{
+  "metal": "Название металла по-русски",
+  "grade": "Марка или тип",
+  "group": "цветной или чёрный",
+  "magnet": "не реагирует / реагирует / слабо реагирует",
+  "price": "от X до Y руб/кг",
+  "confidence": 85,
+  "description": "2-3 предложения: признаки, как определить визуально",
+  "warning": "Предупреждение о похожих металлах (или пустая строка если нет)"
+}`;
+
+  try {
+    const res = await fetch('/api/proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
+            { type: 'text', text: 'Определи металл для пункта приёмки металлолома.' }
+          ]
+        }]
+      })
+    });
+
+    if (!res.ok) throw new Error('API error ' + res.status);
+    const data = await res.json();
+    const text = data.content.map(c => c.text || '').join('').replace(/```json|```/g,'').trim();
+    const result = JSON.parse(text);
+
+    // mark all steps done
+    ['step1','step2','step3','step4'].forEach(s => {
+      const el = document.getElementById(s);
+      el.classList.remove('active');
+      el.classList.add('done');
+    });
+
+    setTimeout(() => {
+      const dateStr = new Date().toLocaleDateString('ru-RU', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+      saveHistory({ ...result, imageUrl: currentDataUrl, date: dateStr });
+      renderResult(result, currentDataUrl);
+      showScreen('resultScreen');
+    }, 400);
+
+  } catch(err) {
+    showToast('Ошибка анализа: ' + err.message);
+    showScreen('homeScreen');
+  }
+}
+
+// ── Render result ──
+function renderResult(r, imgUrl) {
+  document.getElementById('resultImg').src = imgUrl;
+  document.getElementById('resMetalName').textContent = r.metal || '?';
+  document.getElementById('resConf').textContent = (r.confidence || 0) + '%';
+  document.getElementById('resGrade').textContent = r.grade || '—';
+  document.getElementById('resPrice').textContent = r.price || '—';
+  document.getElementById('resGroup').textContent = r.group || '—';
+  document.getElementById('resMagnet').textContent = r.magnet || '—';
+  document.getElementById('resDesc').textContent = r.description || '';
+
+  const warn = document.getElementById('resWarning');
+  if (r.warning) {
+    warn.textContent = '⚠️ ' + r.warning;
+    warn.classList.add('show');
+  } else {
+    warn.classList.remove('show');
+  }
+}
+
+// ── Actions ──
+document.getElementById('scanAgainBtn').addEventListener('click', () => {
+  showScreen('homeScreen');
+});
+
+document.getElementById('shareBtn').addEventListener('click', () => {
+  const r = history[0];
+  if (!r) return;
+  const text = `🔩 МеталлСкан\n\nМеталл: ${r.metal}\nМарка: ${r.grade}\nЦена: ${r.price}\nГруппа: ${r.group}\nМагнит: ${r.magnet}\n\nУверенность: ${r.confidence}%`;
+  if (tg) {
+    tg.switchInlineQuery(text);
+  } else if (navigator.share) {
+    navigator.share({ text });
+  } else {
+    navigator.clipboard?.writeText(text);
+    showToast('Скопировано в буфер');
+  }
+});
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── Back button ──
+if (tg) {
+  tg.BackButton.onClick(() => {
+    const active = document.querySelector('.screen.active')?.id;
+    if (active === 'cameraScreen') { stopCamera(); showScreen('homeScreen'); }
+    else if (active === 'resultScreen') showScreen('homeScreen');
+    else tg.BackButton.hide();
+  });
+}
+</script>
+</body>
+</html>
